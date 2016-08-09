@@ -1,0 +1,23 @@
+FROM       golang:1.6.2-alpine
+MAINTAINER Adobe <fortescu@adobe.com>
+
+
+
+RUN apk update && \
+    apk add \
+      bash \
+      build-base \
+      curl \
+      make \
+      git \
+    && rm -rf /var/cache/apk/* 
+ 
+# install runtime scripts
+ADD . $GOPATH/src/github.com/f4tq/dcos-tests
+WORKDIR $GOPATH/src/github.com/f4tq/dcos-tests
+
+
+RUN  make install-deps && make compile
+ 
+
+CMD bash
