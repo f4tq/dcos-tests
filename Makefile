@@ -31,7 +31,7 @@ compile: dev
 	@if [  -e /.dockerinit ]; then \
 		CGO_ENABLED=0 GOOS=linux  go build .;\
 	else \
-		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-go-build:dev go build ; \
+		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-go-build:dev make install-deps compile ; \
 	fi
 
 
@@ -44,9 +44,12 @@ build-container: compile
 	fi
 
 upload-current:
-	make build-container
-	docker tag f4tq/dcos-tests:`git rev-parse HEAD` index.docker.io/f4tq/dcos-tests:`cat VERSION`
-	docker push index.docker.io/f4tq/dcos-tests:`cat VERSION`
+	@set -x ; REV=`git rev-parse HEAD`; \
+	if [ 0 -eq $$(docker images | grep 'f4tq/dcos-tests' | grep -c "$$REV") ]; then \
+		make build-container ; \
+	fi ; \
+	docker tag f4tq/dcos-tests:$$REV f4tq/dcos-tests:`cat VERSION` ;\
+	docker push f4tq/dcos-tests:`cat VERSION` 
 
 build: compile
 
