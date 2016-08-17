@@ -57,7 +57,7 @@ build: compile
 dev:
 	@set -x; if [ ! -e /.dockerinit ]; then \
 	  (docker images | grep 'f4tq/dcos-tests' | grep -q dev) || \
-	  docker build -f Dockerfile-dev -t f4tq/dcos-go-build:dev . ; \
+	  docker build -f Dockerfile-dev -t f4tq/dcos-tests:dev . ; \
 	fi
 
 # run a shell in the docker dev environment, mounting this directory and establishing bash_history in the container instance

@@ -49,8 +49,8 @@ func init() {
 
 
 type Server struct {
-
-
+	ln       net.Listener
+	httpAddr string
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -102,6 +102,24 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// connections. It's used by ListenAndServe and ListenAndServeTLS so
+// dead TCP connections (e.g. closing laptop mid-download) eventually
+// go away.
+
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
+}
+
 func main() {
 	logrus.SetOutput(os.Stderr)
 
@@ -122,18 +140,42 @@ func main() {
 	signal.Notify(sigchan, os.Interrupt)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
-	server := Server{}
-
+	server := Server{
+		httpAddr: httpAddr,
+	}
+	var (
+		tcp net.Listener
+		unix net.Listener
+	)
 	go func() {
-		http.Handle("/", server)
 
-		if err := http.ListenAndServe(httpAddr, nil); err != nil {
+		httpServer := http.Server{
+			Handler: server,
+		}
+		http.Handle("/", server)
+		if server.httpAddr == "" {
+			server.httpAddr = ":http"
+		}
+		var err error
+		server.ln, err = net.Listen("tcp", server.httpAddr)
+		if err != nil {
 			log.Fatal(err)
+		}
+		logrus.Infof("Listening on %v\n",server.ln.Addr())
+		if err := httpServer.Serve(tcpKeepAliveListener{server.ln.(*net.TCPListener)}); err != nil {
+			logrus.Errorln("http Serve error", err)
 		}
 	}()
 
 	go func() {
-		tcp, err := net.Listen("tcp", fcgiAddr)
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("fcgi Server Recovered in f", r)
+			}
+		}()
+
+		var err error
+		tcp, err = net.Listen("tcp", fcgiAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -141,7 +183,13 @@ func main() {
 	}()
 
 	go func() {
-		unix, err := net.Listen("unix", fcgiSock)
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("fcgi unix Server Recovered in f", r)
+			}
+		}()
+		var err error
+		unix, err = net.Listen("unix", fcgiSock)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -150,13 +198,19 @@ func main() {
 
 	<-sigchan
 	logrus.Debugf("[%v] Got signal.  waiting %d to shutdown", time.Now(),termWait)
+	tcp.Close()
+	unix.Close()
+
+	server.ln.Close()
 	if termWait > 0{
 		time.Sleep(time.Duration(termWait) * time.Second)
 	}
 	logrus.Debugf("[%v] All done.  ",time.Now())
 	if fcgiSock == DefaultFastSOCK {
-		if err := os.Remove(DefaultFastSOCK); err != nil {
-			log.Fatal(err)
+		if _,err :=os.Stat(DefaultFastSOCK); os.IsExist(err) {
+			if err := os.Remove(DefaultFastSOCK); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }

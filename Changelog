@@ -1,0 +1,7 @@
+# Changelog
+
+## v0.2
+Fix http close so that the test image stops serving requests when SIGTERM is received.  Continue to satisfy existing requests.
+
+## v0.1
+Original
