@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.3
+Put in Keep-Alive header parameters configurable via --keep-alive switch defaulting to 60 seconds
+
 ## v0.2
 Fix http close so that the test image stops serving requests when SIGTERM is received.  Continue to satisfy existing requests.
 

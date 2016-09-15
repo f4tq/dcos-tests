@@ -20,7 +20,7 @@ const (
 	DefaultHTTPAddr = ":8080"
 	DefaultFastCGIAddr = ":9001"
 	DefaultFastSOCK = "/tmp/go.sock"
-
+	DefaultKeepAlive=60
 )
 
 var (
@@ -30,6 +30,8 @@ var (
 	fcgiSock string
 	termWait int
 	debug bool
+	keepAlive int
+
 )
 
 func init() {
@@ -37,6 +39,7 @@ func init() {
 	flag.StringVar(&fcgiAddr, "fcgi-addr", DefaultFastCGIAddr, "FastCGI Port")
 	flag.StringVar(&fcgiSock, "fcgi-sock", DefaultFastSOCK, "FastCGI Socket")
 	flag.IntVar(&termWait,"term-wait",0,"How long to wait between SIGTERM(docker stop) and exit")
+	flag.IntVar(&keepAlive,"keep-alive", DefaultKeepAlive,"KeepAlive header timeout.  Default: 60")
 	flag.BoolVar(&debug,"debug",false,"Turn on debug level logging")
 	flag.Usage = func() {
 		logrus.Errorf("Usage: %s [options]  \n", os.Args[0])
@@ -51,6 +54,7 @@ func init() {
 type Server struct {
 	ln       net.Listener
 	httpAddr string
+	keepAlive int
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +83,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			body := fmt.Sprintf("[%v] slept for %d seconds starting @%s", later.String(), period, now.String())
 			w.Header().Set("Server", "gophr")
 			w.Header().Set("Connection", "keep-alive")
+			if s.keepAlive != 0 {
+				w.Header().Set("Keep-Alive", fmt.Sprintf("timeout=%d", s.keepAlive))
+			}
 			w.Header().Set("Content-Type", "text/plain")
 			w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 			fmt.Fprint(w, body)
@@ -92,6 +99,9 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Try to keep the same amount of headers
 		w.Header().Set("Server", "gophr")
 		w.Header().Set("Connection", "keep-alive")
+		if s.keepAlive != 0 {
+			w.Header().Set("Keep-Alive", fmt.Sprintf("timeout=%d", s.keepAlive))
+		}
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 		fmt.Fprint(w, body)
@@ -142,6 +152,7 @@ func main() {
 
 	server := Server{
 		httpAddr: httpAddr,
+		keepAlive: keepAlive,
 	}
 	var (
 		tcp net.Listener

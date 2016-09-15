@@ -2,3 +2,5 @@
 *~
 *.iml
 dcos-tests
+vendor/*
+!vendor/vendor.json
