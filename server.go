@@ -208,7 +208,7 @@ func main() {
 	}()
 
 	<-sigchan
-	logrus.Debugf("[%v] Got signal.  waiting %d to shutdown", time.Now(),termWait)
+	logrus.Infof("[%v] Got signal.  waiting %d to shutdown", time.Now(),termWait)
 	tcp.Close()
 	unix.Close()
 
@@ -216,7 +216,7 @@ func main() {
 	if termWait > 0{
 		time.Sleep(time.Duration(termWait) * time.Second)
 	}
-	logrus.Debugf("[%v] All done.  ",time.Now())
+	logrus.Infof("[%v] All done.  ",time.Now())
 	if fcgiSock == DefaultFastSOCK {
 		if _,err :=os.Stat(DefaultFastSOCK); os.IsExist(err) {
 			if err := os.Remove(DefaultFastSOCK); err != nil {
