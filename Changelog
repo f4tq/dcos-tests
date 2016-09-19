@@ -1,4 +1,7 @@
 # Changelog
+## v0.31
+- Changed term-wait message output to info so the wait period can be seen
+- Fixed `make dev` and make `build-container` to that a docker based dev environment is build and the right one used.
 
 ## v0.3
 Put in Keep-Alive header parameters configurable via --keep-alive switch defaulting to 60 seconds

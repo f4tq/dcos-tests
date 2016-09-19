@@ -31,7 +31,7 @@ compile: dev
 	@if [  -e /.dockerinit ]; then \
 		CGO_ENABLED=0 GOOS=linux  go build .;\
 	else \
-		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-go-build:dev make install-deps compile ; \
+		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-tests:dev make install-deps compile ; \
 	fi
 
 
