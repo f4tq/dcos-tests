@@ -17,7 +17,6 @@ ADD . $GOPATH/src/github.com/f4tq/dcos-tests
 WORKDIR $GOPATH/src/github.com/f4tq/dcos-tests
 
 
-RUN  make install-deps && make compile
- 
+RUN  make install-deps 
 
 CMD bash

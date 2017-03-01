@@ -23,25 +23,21 @@ test:
 # Make compilation depend on the docker dev container
 # Run the build in the dev container leaving the artifact on completion
 # Use run-dev to get an interactive session
-docker-compile: dev
-	docker run -i --rm --net host -v ~/.bash_history-dcos-tests:/root/.bash_history -v `pwd`:/go/src/github.com/adobe-platform/dcos-tests -w /go/src/github.com/adobe-platform/dcos-tests -e version=0.0.1  -e CGO_ENABLED=0 -e GOOS=linux -t f4tq/dcos-tests:dev make compile
+docker-compile: 
+	CGO_ENABLED=0 GOOS=linux  go build .
+
+#	docker run -i --rm --net host -v ~/.bash_history-dcos-tests:/root/.bash_history -v `pwd`:/go/src/github.com/adobe-platform/dcos-tests -w /go/src/github.com/adobe-platform/dcos-tests -e version=0.0.1  -e CGO_ENABLED=0 -e GOOS=linux -t f4tq/dcos-tests:dev make compile
 
 compile: dev
 	@echo "Compiling dcos-tests ..."
-	@if [  -e /.dockerinit ]; then \
-		CGO_ENABLED=0 GOOS=linux  go build .;\
-	else \
-		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-tests:dev make install-deps compile ; \
-	fi
+	@if  [ ! -e /.dockerinit ] &&   ( grep -v -q docker /proc/1/cgroup ) ; then \
+		docker run -i --rm -e  CGO_ENABLED=0 -e GOOS=linux  -v `pwd`:/go/src/github.com/f4tq/dcos-tests -t f4tq/dcos-tests:dev make docker-compile ; \
+	else make docker-compile ; fi
 
 
 build-container: compile
 	@echo "Building dcos-tests container ..."
-	@if [ ! -e /.dockerinit ]; then \
-		docker build --tag f4tq/dcos-tests:`git rev-parse HEAD` .; \
-	else \
-		echo "You're in a docker container. Leave to run docker" ;\
-	fi
+	docker build --tag f4tq/dcos-tests:`git rev-parse HEAD` .; \
 
 upload-current:
 	@set -x ; REV=`git rev-parse HEAD`; \
